@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { BigNumber, Contract, ethers } from 'ethers';
-import Bridge from '../constants/abi/Bridge';
+import BridgeABI from '../constants/abi/Bridge';
 import ERC20 from '../constants/abi/ERC20';
 import TokenVault from '../constants/abi/TokenVault';
 import { chains } from '../domain/chain';
@@ -9,7 +9,11 @@ import { MessageStatus } from '../domain/message';
 import type { BridgeTransaction } from '../domain/transactions';
 import { chainIdToTokenVaultAddress } from '../store/bridge';
 import { get } from 'svelte/store';
-import type { RelayerAPI, RelayerBlockInfo } from 'src/domain/relayerApi';
+import type {
+  RelayerAPI,
+  RelayerBlockInfo,
+  RelayerEventsData,
+} from 'src/domain/relayerApi';
 
 export class RelayerAPIService implements RelayerAPI {
   private readonly providerMap: Map<number, ethers.providers.JsonRpcProvider>;
@@ -37,7 +41,7 @@ export class RelayerAPIService implements RelayerAPI {
 
     const requestURL = `${this.baseUrl}events`;
 
-    const { data } = await axios.get(requestURL, { params });
+    const { data } = await axios.get<RelayerEventsData>(requestURL, { params });
 
     if (data?.items?.length === 0) {
       return [];
@@ -74,12 +78,12 @@ export class RelayerAPIService implements RelayerAPI {
       (txs || []).map(async (tx) => {
         if (tx.message.owner.toLowerCase() !== address.toLowerCase()) return;
 
-        const destChainId = tx.toChainId;
-        const destProvider = this.providerMap.get(destChainId);
+        const { toChainId, fromChainId, hash, from } = tx;
 
-        const srcProvider = this.providerMap.get(tx.fromChainId);
+        const destProvider = this.providerMap.get(toChainId);
+        const srcProvider = this.providerMap.get(fromChainId);
 
-        const receipt = await srcProvider.getTransactionReceipt(tx.hash);
+        const receipt = await srcProvider.getTransactionReceipt(hash);
 
         if (!receipt) {
           return tx;
@@ -87,19 +91,18 @@ export class RelayerAPIService implements RelayerAPI {
 
         tx.receipt = receipt;
 
-        const destBridgeAddress = chains[destChainId].bridgeAddress;
-
-        const srcBridgeAddress = chains[tx.fromChainId].bridgeAddress;
+        const destBridgeAddress = chains[toChainId].bridgeAddress;
+        const srcBridgeAddress = chains[fromChainId].bridgeAddress;
 
         const destContract: Contract = new Contract(
           destBridgeAddress,
-          Bridge,
+          BridgeABI,
           destProvider,
         );
 
         const srcContract: Contract = new Contract(
           srcBridgeAddress,
-          Bridge,
+          BridgeABI,
           srcProvider,
         );
 
@@ -121,7 +124,7 @@ export class RelayerAPIService implements RelayerAPI {
           return tx;
         }
 
-        const msgHash = event.args.msgHash;
+        const { msgHash, message } = event.args;
 
         const messageStatus: number = await destContract.getMessageStatus(
           msgHash,
@@ -129,12 +132,14 @@ export class RelayerAPIService implements RelayerAPI {
 
         let amountInWei: BigNumber;
         let symbol: string;
-        if (event.args.message.data !== '0x') {
+
+        if (message.data !== '0x') {
           const tokenVaultContract = new Contract(
             get(chainIdToTokenVaultAddress).get(tx.fromChainId),
             TokenVault,
             srcProvider,
           );
+
           const filter = tokenVaultContract.filters.ERC20Sent(msgHash);
           const erc20Events = await tokenVaultContract.queryFilter(
             filter,
@@ -145,6 +150,7 @@ export class RelayerAPIService implements RelayerAPI {
           const erc20Event = erc20Events.find(
             (e) => e.args.msgHash.toLowerCase() === msgHash.toLowerCase(),
           );
+
           if (!erc20Event) return;
 
           const erc20Contract = new Contract(
@@ -152,29 +158,32 @@ export class RelayerAPIService implements RelayerAPI {
             ERC20,
             srcProvider,
           );
+
           symbol = await erc20Contract.symbol();
           amountInWei = BigNumber.from(erc20Event.args.amount);
         }
 
         const bridgeTx: BridgeTransaction = {
-          message: event.args.message,
-          receipt: receipt,
-          msgHash: event.args.msgHash,
+          message,
+          receipt,
+          msgHash,
           status: messageStatus,
-          amountInWei: amountInWei,
-          symbol: symbol,
-          fromChainId: tx.fromChainId,
-          toChainId: tx.toChainId,
-          hash: tx.hash,
-          from: tx.from,
+          amountInWei,
+          symbol,
+          fromChainId,
+          toChainId,
+          hash,
+          from,
         };
 
         return bridgeTx;
       }),
     );
 
-    bridgeTxs.reverse();
-    bridgeTxs.sort((tx) => (tx.status === MessageStatus.New ? -1 : 1));
+    bridgeTxs
+      .reverse()
+      .sort((tx) => (tx.status === MessageStatus.New ? -1 : 1));
+
     return bridgeTxs;
   }
 
