@@ -1,13 +1,11 @@
 import { BigNumber, Contract, ethers } from 'ethers';
 import type { Transaction } from 'ethers';
 import type {
-  ApproveOpts,
   Bridge,
   BridgeOpts,
   ClaimOpts,
   ReleaseOpts,
 } from '../domain/bridge';
-import TokenVault from '../constants/abi/TokenVault';
 import type { Prover } from '../domain/proof';
 import { MessageStatus } from '../domain/message';
 import BridgeABI from '../constants/abi/Bridge';
@@ -57,12 +55,12 @@ export class ETHBridge implements Bridge {
     return { contract, owner, message };
   }
 
-  RequiresAllowance(opts: ApproveOpts): Promise<boolean> {
+  RequiresAllowance(): Promise<boolean> {
     return Promise.resolve(false);
   }
 
   // ETH does not need to be approved for transacting
-  Approve(opts: ApproveOpts): Promise<Transaction> {
+  Approve(): Promise<Transaction> {
     return new Promise((resolve) => resolve({} as unknown as Transaction));
   }
 
@@ -113,15 +111,15 @@ export class ETHBridge implements Bridge {
 
     if (messageStatus === MessageStatus.New) {
       const proofOpts = {
-        srcChain: opts.message.srcChainId.toNumber(),
+        srcChain: opts.message.srcChainId,
         msgHash: opts.msgHash,
         sender: opts.srcBridgeAddress,
         srcBridgeAddress: opts.srcBridgeAddress,
-        destChain: opts.message.destChainId.toNumber(),
+        destChain: opts.message.destChainId,
         destHeaderSyncAddress:
-          chains[opts.message.destChainId.toNumber()].headerSyncAddress,
+          chains[opts.message.destChainId].headerSyncAddress,
         srcSignalServiceAddress:
-          chains[opts.message.srcChainId.toNumber()].signalServiceAddress,
+          chains[opts.message.srcChainId].signalServiceAddress,
       };
 
       const proof = await this.prover.GenerateProof(proofOpts);
@@ -169,15 +167,14 @@ export class ETHBridge implements Bridge {
 
     if (messageStatus === MessageStatus.Failed) {
       const proofOpts = {
-        srcChain: opts.message.srcChainId.toNumber(),
+        srcChain: opts.message.srcChainId,
         msgHash: opts.msgHash,
         sender: opts.srcBridgeAddress,
         destBridgeAddress: opts.destBridgeAddress,
-        destChain: opts.message.destChainId.toNumber(),
+        destChain: opts.message.destChainId,
         destHeaderSyncAddress:
-          chains[opts.message.destChainId.toNumber()].headerSyncAddress,
-        srcHeaderSyncAddress:
-          chains[opts.message.srcChainId.toNumber()].headerSyncAddress,
+          chains[opts.message.destChainId].headerSyncAddress,
+        srcHeaderSyncAddress: chains[opts.message.srcChainId].headerSyncAddress,
       };
 
       const proof = await this.prover.GenerateReleaseProof(proofOpts);

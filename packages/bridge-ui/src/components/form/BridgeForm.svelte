@@ -81,11 +81,7 @@
     return addr;
   }
 
-  async function getUserBalance(
-    signer: ethers.Signer,
-    token: Token,
-    fromChain: Chain,
-  ) {
+  async function getUserBalance(signer: ethers.Signer, token: Token) {
     if (signer && token) {
       if (token.symbol == ETHToken.symbol) {
         const userBalance = await signer.getBalance('latest');
@@ -362,7 +358,7 @@
     }
   }
 
-  $: getUserBalance($signer, $token, $fromChain);
+  $: getUserBalance($signer, $token);
 
   $: btnDisabled = isBtnDisabled(
     $signer,
@@ -436,7 +432,7 @@
   </div>
 
   <FaucetModal
-    onMint={async () => await getUserBalance($signer, $token, $fromChain)}
+    onMint={async () => await getUserBalance($signer, $token)}
     bind:isOpen={isFaucetModalOpen} />
 {/if}
 
