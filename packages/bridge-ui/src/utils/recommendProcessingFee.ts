@@ -12,27 +12,28 @@ export const erc20NotDeployedGasLimit = 3100000;
 export const erc20DeployedGasLimit = 1100000;
 
 export async function recommendProcessingFee(
-  toChain: Chain,
-  fromChain: Chain,
-  feeType: ProcessingFeeMethod,
-  token: Token,
-  signer: Signer,
+  toChain: Maybe<Chain>,
+  fromChain: Maybe<Chain>,
+  feeType: Maybe<ProcessingFeeMethod>,
+  token: Maybe<Token>,
+  signer: Maybe<Signer>,
 ): Promise<string> {
   if (!toChain || !fromChain || !token || !signer || !feeType) return '0';
   const provider = providers[toChain.id];
   const gasPrice = await provider.getGasPrice();
+
   // gasLimit for processMessage call for ETH is about ~800k.
   // to make it enticing, we say 900k.
   let gasLimit = ethGasLimit;
   if (token.symbol.toLowerCase() !== ETHToken.symbol.toLowerCase()) {
     let srcChainAddr = token.addresses.find(
       (t) => t.chainId === fromChain.id,
-    ).address;
+    )?.address;
 
     if (!srcChainAddr || srcChainAddr === '0x00') {
       srcChainAddr = token.addresses.find(
         (t) => t.chainId === toChain.id,
-      ).address;
+      )?.address;
     }
 
     const tokenVault = new Contract(

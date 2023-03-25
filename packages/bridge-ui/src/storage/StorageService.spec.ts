@@ -185,15 +185,13 @@ describe('storage tests', () => {
       return MessageStatus.New;
     });
 
-    mockContract.queryFilter.mockImplementation(
-      (name: string, from: BigNumberish, to: BigNumberish) => {
-        if (name === 'ERC20Sent') {
-          return mockErc20Query;
-        }
+    mockContract.queryFilter.mockImplementation((name: string) => {
+      if (name === 'ERC20Sent') {
+        return mockErc20Query;
+      }
 
-        return mockQuery;
-      },
-    );
+      return mockQuery;
+    });
 
     mockContract.symbol.mockImplementation(() => {
       return TKOToken.symbol;
@@ -237,15 +235,13 @@ describe('storage tests', () => {
       return MessageStatus.New;
     });
 
-    mockContract.queryFilter.mockImplementation(
-      (name: string, from: BigNumberish, to: BigNumberish) => {
-        if (name === 'ERC20Sent') {
-          return mockErc20Query;
-        }
+    mockContract.queryFilter.mockImplementation((name: string) => {
+      if (name === 'ERC20Sent') {
+        return mockErc20Query;
+      }
 
-        return mockQuery;
-      },
-    );
+      return mockQuery;
+    });
 
     mockContract.symbol.mockImplementation(() => {
       return TKOToken.symbol;
@@ -292,15 +288,13 @@ describe('storage tests', () => {
       return MessageStatus.New;
     });
 
-    mockContract.queryFilter.mockImplementation(
-      (name: string, from: BigNumberish, to: BigNumberish) => {
-        if (name === 'ERC20Sent') {
-          return mockErc20Query;
-        }
+    mockContract.queryFilter.mockImplementation((name: string) => {
+      if (name === 'ERC20Sent') {
+        return mockErc20Query;
+      }
 
-        return mockQuery;
-      },
-    );
+      return mockQuery;
+    });
 
     mockContract.symbol.mockImplementation(() => {
       return TKOToken.symbol;

@@ -14,7 +14,8 @@
      */
     "allowJs": true,
     "checkJs": true,
-    "isolatedModules": false
+    "isolatedModules": false,
+    "strictNullChecks": true
   },
   "include": [
     "vite.config.ts",
